@@ -1,4 +1,4 @@
-from housing.utils.models import quick_test
+from utils.models import quick_test
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
