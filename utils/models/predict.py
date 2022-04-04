@@ -28,3 +28,5 @@ def prepare_samples(df_sample):
     sample_Xst = scaler.fit_transform(sample_X)
     return sample_Xst, sample_y
 
+
+

@@ -1,6 +1,7 @@
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+from utils import stats
 
 
 def corr_matrix(df, col=None):
@@ -135,3 +136,14 @@ def show_insights(df, col, prop):
     print(temp.price.describe())
     mean, iqr = np.mean(temp['price']), stats.iqr(temp['price'])
     print(f'\nOutlier (mean +- 1.5*IQR)= [{mean - 1.5 * iqr}, {mean + 1.5 * iqr}]')
+
+
+def show_importance(sort):
+    sns.barplot(np.arange(0, len(sort)), sort['importance'])
+    plt.title('Feature importances', fontsize=17)
+    plt.xticks(np.arange(0, len(sort)), sort['index'], rotation=90)
+    plt.yticks(np.arange(0, 0.5, 0.1))
+    plt.xlabel('Column', fontsize=14)
+    plt.ylabel('Importance', fontsize=14)
+    plt.tight_layout()
+    plt.show()
