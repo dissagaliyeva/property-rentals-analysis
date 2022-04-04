@@ -23,15 +23,20 @@ def random_forest(df, features=False):
     print('Best params:', best)
 
     rf = RandomForestRegressor(best['n_estimators'],
-                                 max_depth=best['max_depth'],
-                                 min_samples_leaf=best['min_samples_leaf'],
-                                 max_features=best['max_features'],
-                                 bootstrap=True)
+                               max_depth=best['max_depth'],
+                               min_samples_leaf=best['min_samples_leaf'],
+                               max_features=best['max_features'],
+                               bootstrap=True)
+    sort = None
 
     if features:
         sort = choose_features(rf, X_train, y_train)
 
     return rf, sort
+
+
+def return_tree():
+    pass
 
 
 def hyper_params(model, x, y, name='rf'):
@@ -73,7 +78,3 @@ def choose_features(model, x, y):
     viz.show_importance(sort)
 
     return sort
-
-
-
-
