@@ -1,163 +1,122 @@
 import numpy as np
 import seaborn as sns
-import matplotlib.pyplot as plt
-from utils import stats
 import ppscore as pps
+import matplotlib.pyplot as plt
 
 
-def corr_matrix(df, col=None):
-    if col is None:
-        col = 'price'
+def property_room(df, col='bedrooms', val=None):
+    """
+        Visualize pandas DataFrame's column distribution.
+        It's possible to select DataFrame's subset at a
+        specific value. See Examples for more details.
 
-    assert col in df.columns, 'Invalid column'
+        Parameters
+        ----------
 
-    if len(df.columns) < 10:
-        corr = df.corr()
-        mask = np.array(corr)
-        mask[np.tril_indices_from(mask)] = False
+        df  :   Pandas DataFrame object
 
-        fig, ax = plt.subplots(1, 2, figsize=(15, 7))
-        fig.suptitle(f'{col.title()} column correlation', fontsize=20)
-        sns.heatmap(corr, mask=mask, vmax=1, square=True, annot=True, fmt='.1g', ax=ax[0])
-        single_corr(df, col, ax=ax[1])
-        plt.show()
-    else:
-        fig, ax = plt.subplots(1, 1, figsize=(10, 7))
-        single_corr(df, col, ax=ax)
-        plt.show()
+        col :   string
+                Column from a DataFrame object to subset
 
+        val :   int or tuple
+                Number or tuple of numbers to subset a
+                DataFrame. See Examples for more details
 
-def single_corr(df, col, ax):
-    # sorted column representation
-    return sns.heatmap(df.corr()[[col]].sort_values(by=col, ascending=False)[1:],
-                       annot=True, vmin=-1, vmax=1, ax=ax)
+        Examples
+        --------
+        >>> property_room(df, 'bedrooms', (3, 9))
+        This line will show all entries where bedrooms
+        bigger than 3 and less than 9 (including).
 
+        >>> property_room(df, 'bathrooms', 1)
+        This line will show all entries where bathrooms
+        are equal to 1.
+    """
 
-def visualize(df, col, title, min_=None, max_=None, sort=True):
-    temp = get_df(df, col, min_, max_)
-
-    if sort:
-        temp = temp.groupby(col).size().sort_values(ascending=False)
-    else:
-        temp = temp[col].value_counts().reset_index().sort_values(by='index')
-
-    temp.plot(x='index', y=col, kind='bar', rot=60).set_title(title)
-    plt.show()
-
-
-def get_df(df, col, min_, max_):
-    if min_ and max_:
-        if min_ < 0 or max_ < min_ or max_ < 0: return df
-        return df[(df[col] >= min_) & (df[col] <= max_)]
-    if min_:
-        if min_ < 0: return df
-        return df[df[col] >= min_]
-    if max_:
-        if max_ < 0: return df
-        return df[df[col] <= max_]
-    return df
-
-
-def plot_feature_importance(feature_importance, title, feature_names):
-    # Normalize the importance values
-    feature_importance = 100.0 * (feature_importance / max(feature_importance))
-
-    # Sort the values and flip them
-    index_sorted = np.flipud(np.argsort(feature_importance))
-
-    # Arrange the X ticks
-    pos = np.arange(index_sorted.shape[0]) + 0.5
-
-    # Plot the bar graph
-    plt.figure(figsize=(15, 5))
-    plt.bar(pos, feature_importance[index_sorted], align='center')
-    plt.xticks(pos, feature_names[index_sorted])
-    plt.ylabel('Relative Importance')
-    plt.title(title)
-    plt.show()
-
-
-def property_room(df, col='bedrooms', val=0):
+    # select necessary entries
     if type(val) == tuple:
-        temp = df[(df[col] > val[0]) | (df[col] <= 0)]
+        temp = df[(df[col] > val[0]) | (df[col] <= val[1])]
     else:
         temp = df[df[col] == val]
 
+    # create subplots
     fig, ax = plt.subplots(1, 2, figsize=(15, 5))
+
+    # set title
     fig.suptitle(f'{col.title()}={val} distribution', fontsize=20)
 
+    # show a count plot for property type
     sns.countplot(y=temp['property_type'], ax=ax[0],
                   order=temp['property_type'].value_counts().index)
 
+    # show a count plot for room type
     sns.countplot(y=temp['room_type'], ax=ax[1],
                   order=temp['room_type'].value_counts().index)
     plt.tight_layout()
     plt.show()
 
 
-def hist(df, col, bins=30):
-    title = col.title() + ' distribution'
-
-    plt.figure(figsize=(7, 5))
-    df[col].plot(kind='hist', bins=bins).set_title(title)
-    plt.xlabel(col)
-    plt.show()
-
-
-def get_property(df, n, head=True):
-    temp = df['property_type'].value_counts()
-
-    if head:
-        temp = temp.head(n).reset_index()
-    else:
-        temp = temp.tail(n).reset_index()
-
-    if temp['property_type'].mean(axis=0) == 1:
-        print('Cannot plot a KDE plot, all values are 1\n\n')
-        print(temp)
-    else:
-        temp = temp['index'].tolist()
-        temp = df.drop(index=df[~df['property_type'].isin(temp)].index, axis='columns')
-        kdeplot(temp)
-        return temp
-
-
-def kdeplot(df):
-    plt.figure(figsize=(15, 10))
-    sns.kdeplot(data=df, x='price', hue='property_type')
-    plt.legend(df['property_type'].unique().tolist())
-    plt.show()
-
-
-def show_insights(df, col, prop):
-    temp = df[df[col] == prop]
-    temp[['price']].boxplot().set_title(f'{prop.title()} price distribution')
-    plt.show()
-
-    print(temp.price.describe())
-    mean, iqr = np.mean(temp['price']), stats.iqr(temp['price'])
-    print(f'\nOutlier (mean +- 1.5*IQR)= [{mean - 1.5 * iqr}, {mean + 1.5 * iqr}]')
-
-
 def show_importance(sort):
+    """
+        Visualize the resulting RandomForestRegressor features.
+        It should contain two columns only: "importance" and "index".
+
+            - "index" column should contain all 34 columns without "price".
+            - "importance" column should contain values within 0-1, the
+              cumulative sum should be equal to 1.
+
+        Parameters
+        ----------
+
+        sort :  Pandas DataFrame object
+                Pandas DataFrame object containing two columns: "importance"
+                and "index". It is the result of running RandomForestRegressor
+                to get most important features.
+
+    """
+    # verify the columns are present
+    length = len(set(sort.columns.tolist()).difference({'importance', 'index'}))
+    assert length == 0, "DataFrame does not have either 'importance' or 'index' columns."
+
+    # visualize importance
     sns.barplot(np.arange(0, len(sort)), sort['importance'])
+
+    # set title
     plt.title('Feature importances', fontsize=17)
+
+    # set ticks and labels
     plt.xticks(np.arange(0, len(sort)), sort['index'], rotation=90)
     plt.yticks(np.arange(0, 0.5, 0.1))
     plt.xlabel('Column', fontsize=14)
     plt.ylabel('Importance', fontsize=14)
+
+    # fix representation and show
     plt.tight_layout()
     plt.show()
 
 
 def pps_matrix(df):
-    # Calculate pps
-    pps_matrix = pps.matrix(df)
+    """
+        Calculate and visualize Predictive Power Score for a
+        pandas DataFrame with both numeric and categorical columns.
+
+        Parameters
+        ----------
+
+        df :    Pandas DataFrame object
+    """
+
+    # calculate pps score
+    matrix = pps.matrix(df)
+
     # Prepare data to pivot table
-    pps_pivot = pps_matrix.pivot('x', 'y', 'ppscore')
+    pps_pivot = matrix.pivot('x', 'y', 'ppscore')
     pps_pivot.index.name, pps_pivot.columns.name = None, None
+
     # Plot
     plt.figure(figsize=(10, 4))
     sns.heatmap(pps_pivot, annot=True, cmap='YlGn')
-    plt.title('Predictive Power Score Matrix', fontsize=16);
+
+    # set title
+    plt.title('Predictive Power Score Matrix', fontsize=17)
     plt.show()
